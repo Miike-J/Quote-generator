@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, {useEffect, useState} from 'react'
 
 import Head from 'next/head'
 import Image from 'next/image'
@@ -10,10 +10,67 @@ import { BackgroundImage1, BackgroundImage2, FooterCon, FooterLink, GenerateQuot
 //Assests
 import Cloud1 from '@/assests/Cloud1.png'
 import Cloud2 from '@/assests/Cloud2.png'
+import { API } from 'aws-amplify';
+import { quoteQueryName } from '@/src/graphql/queries';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
+
+
+// interface for DynamoDB object
+interface UpdateQuoteInfoData {
+  id: string;
+  queryName: string;
+  quotesGenerated: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// type guard for our fetch funciton 
+function isGraphQLResultForquotesQueryName(response: any): response is GraphQLResult<{
+  quotesQueryName: {
+    items: [UpdateQuoteInfoData];
+  };
+}> {
+  return response.data && response.data.quotesQueryName && response.data.quotesQueryName.items;
+}
 
 
 export default function Home() {
   const [numberOfQuotes, setNumberofQuotes] = useState<Number | null>(0);
+
+  // Function to fetch our DynamoDB object (quotes generated)
+  const updateQuoteInfo = async () => {
+    try {
+      const response = await API.graphql<UpdateQuoteInfoData>({
+        query: quoteQueryName,
+        authMode: 'AWS_IAM',
+        variables: {
+          queryName: "LIVE",
+        },
+      })
+      // console.log('response', response)
+
+      //Create type guards
+      if (!isGraphQLResultForquotesQueryName(response)) {
+        throw new Error('Unexpected response from API.graphql')
+      }
+
+      if (!response.data) {
+        throw new Error('Response data is undefined')
+      }
+
+      const recievedNumberOfQuotes = response.data.quotesQueryName.items[0].quotesGenerated;
+      setNumberofQuotes(recievedNumberOfQuotes);
+
+
+    } catch (error) {
+      console.log('error getting quote data', error)
+    }
+  }
+
+  useEffect(() => {
+    updateQuoteInfo();
+  }, [])
+
   return (
     <>
       <Head>
@@ -41,7 +98,9 @@ export default function Home() {
             </QuoteGeneratorSubTitle>
 
             <GenerateQuoteButton>
-              <GenerateQuoteButtonText onClick={null}>
+              <GenerateQuoteButtonText 
+              // onClick={null}
+              >
                 Make a Quote
               </GenerateQuoteButtonText>
             </GenerateQuoteButton>
