@@ -12,9 +12,19 @@ import QuoteGeneratorModal from '../components/QuoteGenerator/ index'
 import Cloud1 from '@/assests/Cloud1.png'
 import Cloud2 from '@/assests/Cloud2.png'
 import { API } from 'aws-amplify';
-import { quoteQueryName } from '@/src/graphql/queries';
+import { generateAQuote, quoteQueryName } from '@/src/graphql/queries';
 import { GraphQLResult } from '@aws-amplify/api-graphql';
+import { GenerateAQuoteQuery } from '@/src/API';
 
+
+// Interface for our appsync <> lambda JSON resposne
+interface GenerateAQuoteData {
+  generateAQuote: {
+    statusCode: number;
+    headers: {[key: string]: string};
+    body: string
+  }
+}
 
 // interface for DynamoDB object
 interface UpdateQuoteInfoData {
@@ -27,19 +37,20 @@ interface UpdateQuoteInfoData {
 
 // type guard for our fetch funciton 
 function isGraphQLResultForquotesQueryName(response: any): response is GraphQLResult<{
-  quotesQueryName: {
+  quoteQueryName: {
     items: [UpdateQuoteInfoData];
   };
 }> {
-  return response.data && response.data.quotesQueryName && response.data.quotesQueryName.items;
+  return response.data  && response.data.quoteQueryName && response.data.quoteQueryName.items;
 }
 
 
 export default function Home() {
-  const [numberOfQuotes, setNumberofQuotes] = useState<Number | null>(0);
+
+  const [numberOfQuotes, setNumberOfQuotes] = useState<Number | null>(0);
   const [openGenerator, setOpenGenerator] = useState(false);
   const [processingQuote, setProcessingQuote] = useState(false);
-  const [quoteReceived, setQuoteReceived] = useState<String | null>(null)
+  const [quoteReceived, setQuoteReceived] = useState<String | null>(null);
 
 
   // Function to fetch our DynamoDB object (quotes generated)
@@ -52,10 +63,11 @@ export default function Home() {
           queryName: "LIVE",
         },
       })
-      // console.log('response', response)
+      console.log('response', response)
 
       //Create type guards
       if (!isGraphQLResultForquotesQueryName(response)) {
+        console.log(isGraphQLResultForquotesQueryName(response))
         throw new Error('Unexpected response from API.graphql')
       }
 
@@ -63,8 +75,8 @@ export default function Home() {
         throw new Error('Response data is undefined')
       }
 
-      const recievedNumberOfQuotes = response.data.quotesQueryName.items[0].quotesGenerated;
-      setNumberofQuotes(recievedNumberOfQuotes);
+      const recievedNumberOfQuotes = response.data.quoteQueryName.items[0].quotesGenerated;
+      setNumberOfQuotes(recievedNumberOfQuotes);
 
 
     } catch (error) {
@@ -80,6 +92,8 @@ export default function Home() {
 
   const handleCloseGenerator = () => {
     setOpenGenerator(false);
+    setProcessingQuote(false);
+    setQuoteReceived(null);
   }
   
   const handleOpenGenerator = async(e: React.SyntheticEvent) => {
@@ -88,10 +102,30 @@ export default function Home() {
     setProcessingQuote(true);
     try {
       // Run Lambda Function
-      // setProcessingQuote(false);
-      setTimeout(() => {
-        setProcessingQuote(false);
-      }, 3000);
+      const runFunction = "runFunction"
+      const runFunctionStringified = JSON.stringify(runFunction)
+      const response = await API.graphql<GenerateAQuoteData>({
+        query: generateAQuote,
+        authMode: "AWS_IAM",
+        variables: {
+          input: runFunctionStringified,
+        },
+      });
+      const responseStringified = JSON.stringify(response);
+      const responseReStringified = JSON.stringify(responseStringified);
+      const bodyIndex = responseReStringified.indexOf("body=") + 5;
+      const bodyAndBase64 = responseReStringified.substring(bodyIndex)
+      const bodyArray = bodyAndBase64.split(',');
+      const body = bodyArray[0]
+      console.log(body);
+      setQuoteReceived(body);
+
+      // End state
+      setProcessingQuote(false);
+
+      //Fetch any new quotes were generated from counter
+      updateQuoteInfo()
+     
     } catch (error) {
       console.log('error generating quote:', error)
       setProcessingQuote(false);
@@ -113,10 +147,10 @@ export default function Home() {
         <QuoteGeneratorModal
           open={openGenerator}
           close={handleCloseGenerator}
-            processingQuote={processingQuote}
-            setProcessingQuote={setProcessingQuote}
-            quoteReceived={quoteReceived}
-            setQuoteReceived={setQuoteReceived}
+          processingQuote={processingQuote}
+          setProcessingQuote={setProcessingQuote}
+          quoteReceived={quoteReceived}
+          setQuoteReceived={setQuoteReceived}
         />
 
         {/* Quote Generator */}
