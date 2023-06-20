@@ -5,8 +5,8 @@
   "javascript": {
     "framework": "react",
     "config": {
-      "SourceDir": "src",
-      "DistributionDir": "build",
+      "SourceDir": "'/home/michael/coding/next/Quote-generator/amplify/backend/function/inspoquoteLambda/src'",
+      "DistributionDir": "'/home/michael/coding/next/Quote-generator/amplify/backend/api/quotegenerator/build'",
       "BuildCommand": "npm run-script build",
       "StartCommand": "npm run-script start"
     }
