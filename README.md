@@ -1,9 +1,9 @@
-## Inspirational Quote Generator 
+# Inspirational Quote Generator 
 
 ***
 
-# Website built using Typescript, Next.js and AWS which generates images containing inspirational quotes from the ZenQuotesAPI which can be downloaded. 
-# Accessible by this link: [Quote Generator](https://prod.d1d90owmez3e6d.amplifyapp.com/)
+## Website built using Typescript, Next.js and AWS which generates images containing inspirational quotes from the ZenQuotesAPI which can be downloaded. 
+## Accessible by this link: [Quote Generator](https://prod.d1d90owmez3e6d.amplifyapp.com/)
 
 <p>The purpose of this project was to get my first bit of experience using Typescript and AWS before moving on to make my own projects using these technologies (which took longer than anticipated but that's life)
 
